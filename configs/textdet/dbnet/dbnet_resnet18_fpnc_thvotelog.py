@@ -16,7 +16,7 @@ thvotelog_textdet_test = dict(
        type='ConcatDataset', datasets=[_base_.thvote_textdet_test],
        pipeline=_base_.test_pipeline,
 )
-thvotelog_textdet_test.pipeline = _base_.test_pipeline
+# thvotelog_textdet_test.pipeline = _base_.test_pipeline
 
 train_dataloader = dict(
     batch_size=16,
