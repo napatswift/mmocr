@@ -7,16 +7,10 @@ _base_ = [
 ]
 
 # dataset settings
-thvotelog_textdet_train = dict(
-       type='ConcatDataset', datasets=[_base_.thvl_textdet_train,
-                                       _base_.thvote_textdet_train],
-       pipeline=_base_.train_pipeline,
-)
-thvotelog_textdet_test = dict(
-       type='ConcatDataset', datasets=[_base_.thvote_textdet_test],
-       pipeline=_base_.test_pipeline,
-)
-# thvotelog_textdet_test.pipeline = _base_.test_pipeline
+thvotelog_textdet_train = _base_.thvl_textdet_train
+thvotelog_textdet_train.pipeline=_base_.train_pipeline
+thvotelog_textdet_test = _base_.thvote_textdet_test
+thvotelog_textdet_test.pipeline = _base_.test_pipeline
 
 train_dataloader = dict(
     batch_size=16,
