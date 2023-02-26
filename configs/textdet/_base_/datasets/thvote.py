@@ -1,6 +1,6 @@
-textdet_data_root = 'data/thaidoc'
+textdet_data_root = 'data/det/textdet-thvote'
 
-textdet_train = dict(
+thvote_textdet_train = dict(
     type='OCRDataset',
     data_root=textdet_data_root,
     ann_file='textdet_train.json',
@@ -8,7 +8,7 @@ textdet_train = dict(
     filter_cfg=dict(filter_empty_gt=True, min_size=32),
     pipeline=None)
 
-textdet_test = dict(
+thvote_textdet_test = dict(
     type='OCRDataset',
     data_root=textdet_data_root,
     ann_file='textdet_test.json',
