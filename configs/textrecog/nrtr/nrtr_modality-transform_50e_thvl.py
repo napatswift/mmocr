@@ -1,20 +1,21 @@
 _base_ = [
     '../_base_/datasets/thvl.py',
+    '../_base_/datasets/synTH.py',
     '../_base_/default_runtime.py',
     '../_base_/schedules/schedule_adam_base.py',
     '_base_nrtr_modality-transform.py',
 ]
 
 # optimizer settings
-train_cfg = dict(max_epochs=50)
+train_cfg = dict(max_epochs=5)
 # learning policy
 param_scheduler = [
     dict(type='MultiStepLR', milestones=[3, 4], end=6),
 ]
 
 # dataset settings
-train_list = [_base_.thvl_textrecog_train,]
-test_list = [_base_.thvl_textrecog_test,]
+train_list = [_base_.thvl_textrecog_train, _base_.synTH_textrecog_train]
+test_list = [_base_.thvl_textrecog_test, _base_.synTH_textrecog_test]
 
 train_dataset = dict(
     type='ConcatDataset', datasets=train_list, pipeline=_base_.train_pipeline)
@@ -29,7 +30,7 @@ train_dataloader = dict(
     dataset=train_dataset)
 
 test_dataloader = dict(
-    batch_size=1,
+    batch_size=128,
     num_workers=4,
     persistent_workers=True,
     drop_last=False,
