@@ -4,7 +4,6 @@ dictionary = dict(
     type='Dictionary',
     dict_file='{{ fileDirname }}/../../../dicts/thai_digits_symbols.txt',
     with_padding=True,
-    with_unknown=True,
     same_start_end=True,
     with_start=True,
     with_end=True)

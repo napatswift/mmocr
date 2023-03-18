@@ -18,11 +18,6 @@ test_list = [
 
 default_hooks = dict(logger=dict(type='LoggerHook', interval=50),)
 
-dictionary = dict(
-    type='Dictionary',
-    dict_file='{{ fileDirname }}/../../../dicts/thai_digits_symbols.txt',
-    with_padding=True)
-
 train_dataloader = dict(
     batch_size=384,
     num_workers=24,
