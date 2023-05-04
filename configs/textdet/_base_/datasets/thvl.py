@@ -1,3 +1,4 @@
+# synthetic dataset
 thvl_textdet_data_root = 'data/det/thvl'
 
 thvl_textdet_train = dict(

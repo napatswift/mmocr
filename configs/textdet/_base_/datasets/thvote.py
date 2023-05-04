@@ -1,3 +1,4 @@
+# real world dataset
 thvote_textdet_data_root = 'data/det/textdet-thvote'
 
 thvote_textdet_train = dict(
