@@ -1,5 +1,3 @@
-file_client_args = dict(backend='disk')
-
 dictionary = dict(
     type='Dictionary',
     dict_file='{{ fileDirname }}/../../../dicts/english_digits_symbols.txt',
@@ -48,11 +46,7 @@ model = dict(
         std=[127.5, 127.5, 127.5]))
 
 train_pipeline = [
-    dict(
-        type='LoadImageFromFile',
-        file_client_args=file_client_args,
-        ignore_empty=True,
-        min_size=5),
+    dict(type='LoadImageFromFile', ignore_empty=True, min_size=5),
     dict(type='LoadOCRAnnotations', with_text=True),
     dict(type='Resize', scale=(256, 64)),
     dict(
@@ -61,11 +55,50 @@ train_pipeline = [
 ]
 
 test_pipeline = [
-    dict(type='LoadImageFromFile', file_client_args=file_client_args),
+    dict(type='LoadImageFromFile'),
     dict(type='Resize', scale=(256, 64)),
     dict(type='LoadOCRAnnotations', with_text=True),
     dict(
         type='PackTextRecogInputs',
         meta_keys=('img_path', 'ori_shape', 'img_shape', 'valid_ratio',
                    'instances'))
+]
+
+tta_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='TestTimeAug',
+        transforms=[[
+            dict(
+                type='ConditionApply',
+                true_transforms=[
+                    dict(
+                        type='ImgAugWrapper',
+                        args=[dict(cls='Rot90', k=0, keep_size=False)])
+                ],
+                condition="results['img_shape'][1]<results['img_shape'][0]"),
+            dict(
+                type='ConditionApply',
+                true_transforms=[
+                    dict(
+                        type='ImgAugWrapper',
+                        args=[dict(cls='Rot90', k=1, keep_size=False)])
+                ],
+                condition="results['img_shape'][1]<results['img_shape'][0]"),
+            dict(
+                type='ConditionApply',
+                true_transforms=[
+                    dict(
+                        type='ImgAugWrapper',
+                        args=[dict(cls='Rot90', k=3, keep_size=False)])
+                ],
+                condition="results['img_shape'][1]<results['img_shape'][0]"),
+        ], [dict(type='Resize', scale=(256, 64))],
+                    [dict(type='LoadOCRAnnotations', with_text=True)],
+                    [
+                        dict(
+                            type='PackTextRecogInputs',
+                            meta_keys=('img_path', 'ori_shape', 'img_shape',
+                                       'valid_ratio', 'instances'))
+                    ]])
 ]

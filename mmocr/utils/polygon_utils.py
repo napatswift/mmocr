@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import functools
+import math
+import operator
+from functools import reduce
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -48,9 +50,10 @@ def rescale_polygon(polygon: ArrayLike,
     return polygon
 
 
-def rescale_polygons(polygons: Sequence[ArrayLike],
+def rescale_polygons(polygons: Union[ArrayLike, Sequence[ArrayLike]],
                      scale_factor: Tuple[int, int],
-                     mode: str = 'mul') -> Sequence[np.ndarray]:
+                     mode: str = 'mul'
+                     ) -> Union[ArrayLike, Sequence[np.ndarray]]:
     """Rescale polygons according to scale_factor.
 
     The behavior is different depending on the mode. When mode is 'mul', the
@@ -61,19 +64,22 @@ def rescale_polygons(polygons: Sequence[ArrayLike],
     image size.
 
     Args:
-        polygons (list[ArrayLike]): A list of polygons, each written in
-            [x1, y1, x2, y2, ...] and in any form can be converted
+        polygons (list[ArrayLike] or ArrayLike): A list of polygons, each
+            written in [x1, y1, x2, y2, ...] and in any form can be converted
             to an 1-D numpy array. E.g. list[list[float]],
             list[np.ndarray], or list[torch.Tensor].
         scale_factor (tuple(int, int)): (w_scale, h_scale).
         model (str): Rescale mode. Can be 'mul' or 'div'. Defaults to 'mul'.
 
     Returns:
-        list[np.ndarray]: Rescaled polygons.
+        list[np.ndarray] or np.ndarray: Rescaled polygons. The type of the
+        return value depends on the type of the input polygons.
     """
     results = []
     for polygon in polygons:
         results.append(rescale_polygon(polygon, scale_factor, mode))
+    if isinstance(polygons, np.ndarray):
+        results = np.array(results)
     return results
 
 
@@ -148,13 +154,11 @@ def crop_polygon(polygon: ArrayLike,
         np.array or None: Cropped polygon. If the polygon is not within the
             crop box, return None.
     """
-    poly = poly2shapely(polygon)
-    crop_poly = poly2shapely(bbox2poly(crop_box))
-    poly_cropped = poly.intersection(crop_poly)
-    if poly_cropped.area == 0. or not isinstance(
+    poly = poly_make_valid(poly2shapely(polygon))
+    crop_poly = poly_make_valid(poly2shapely(bbox2poly(crop_box)))
+    area, poly_cropped = poly_intersection(poly, crop_poly, return_poly=True)
+    if area == 0 or area is None or not isinstance(
             poly_cropped, shapely.geometry.polygon.Polygon):
-        # If polygon is outside crop_box region or the intersection is not a
-        # polygon, return None.
         return None
     else:
         poly_cropped = poly_make_valid(poly_cropped)
@@ -208,9 +212,8 @@ def poly_intersection(poly_a: Polygon,
         float or tuple(float, Polygon): Returns the intersection area or
         a tuple ``(area, Optional[poly_obj])``, where the `area` is the
         intersection area between two polygons and `poly_obj` is The Polygon
-        object of the intersection area. Set as `None` if the input is invalid.
-        Set as `None` if the input is invalid. `poly_obj` will be returned
-        only if `return_poly` is `True`.
+        object of the intersection area, which will be `None` if the input is
+        invalid. `poly_obj` will be returned only if `return_poly` is `True`.
     """
     assert isinstance(poly_a, Polygon)
     assert isinstance(poly_b, Polygon)
@@ -223,8 +226,12 @@ def poly_intersection(poly_a: Polygon,
     poly_obj = None
     area = invalid_ret
     if poly_a.is_valid and poly_b.is_valid:
-        poly_obj = poly_a.intersection(poly_b)
-        area = poly_obj.area
+        if poly_a.intersects(poly_b):
+            poly_obj = poly_a.intersection(poly_b)
+            area = poly_obj.area
+        else:
+            poly_obj = Polygon()
+            area = 0.0
     return (area, poly_obj) if return_poly else area
 
 
@@ -332,7 +339,7 @@ def offset_polygon(poly: ArrayLike, distance: float) -> ArrayLike:
     pco.AddPath(poly, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
     # Returned result will be in type of int32, convert it back to float32
     # following MMOCR's convention
-    result = np.array(pco.Execute(distance))
+    result = np.array(pco.Execute(distance), dtype=object)
     if len(result) > 0 and isinstance(result[0], list):
         # The processed polygon has been split into several parts
         result = np.array([])
@@ -367,8 +374,14 @@ def boundary_iou(src: List,
 
 def sort_points(points):
     # TODO Add typehints & test & docstring
-    """Sort arbitory points in clockwise order. Reference:
-    https://stackoverflow.com/a/6989383.
+    """Sort arbitrary points in clockwise order in Cartesian coordinate, you
+    may need to reverse the output sequence if you are using OpenCV's image
+    coordinate.
+
+    Reference:
+    https://github.com/novioleo/Savior/blob/master/Utils/GeometryUtils.py.
+
+    Warning: This function can only sort convex polygons.
 
     Args:
         points (list[ndarray] or ndarray or list[list]): A list of unsorted
@@ -377,33 +390,16 @@ def sort_points(points):
     Returns:
         list[ndarray]: A list of points sorted in clockwise order.
     """
-
     assert is_list_of(points, np.ndarray) or isinstance(points, np.ndarray) \
         or is_2dlist(points)
-
-    points = np.array(points)
-    center = np.mean(points, axis=0)
-
-    def cmp(a, b):
-        oa = a - center
-        ob = b - center
-
-        # Some corner cases
-        if oa[0] >= 0 and ob[0] < 0:
-            return 1
-        if oa[0] < 0 and ob[0] >= 0:
-            return -1
-
-        prod = np.cross(oa, ob)
-        if prod > 0:
-            return 1
-        if prod < 0:
-            return -1
-
-        # a, b are on the same line from the center
-        return 1 if (oa**2).sum() < (ob**2).sum() else -1
-
-    return sorted(points, key=functools.cmp_to_key(cmp))
+    center_point = tuple(
+        map(operator.truediv,
+            reduce(lambda x, y: map(operator.add, x, y), points),
+            [len(points)] * 2))
+    return sorted(
+        points,
+        key=lambda coord: (180 + math.degrees(
+            math.atan2(*tuple(map(operator.sub, coord, center_point))))) % 360)
 
 
 def sort_vertex(points_x, points_y):

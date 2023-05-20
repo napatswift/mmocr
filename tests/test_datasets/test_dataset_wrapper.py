@@ -4,9 +4,10 @@ from copy import deepcopy
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+from mmengine.registry import init_default_scope
+
 from mmocr.datasets import ConcatDataset, OCRDataset
 from mmocr.registry import TRANSFORMS
-from mmocr.utils import register_all_modules
 
 
 class TestConcatDataset(TestCase):
@@ -22,7 +23,7 @@ class TestConcatDataset(TestCase):
 
     def setUp(self):
 
-        register_all_modules()
+        init_default_scope('mmocr')
         dataset = OCRDataset
 
         # create dataset_a
@@ -33,13 +34,13 @@ class TestConcatDataset(TestCase):
             data_root=osp.join(
                 osp.dirname(__file__), '../data/det_toy_dataset'),
             data_prefix=dict(img_path='imgs'),
-            ann_file='instances_test.json')
+            ann_file='textdet_test.json')
 
         self.dataset_a_with_pipeline = dataset(
             data_root=osp.join(
                 osp.dirname(__file__), '../data/det_toy_dataset'),
             data_prefix=dict(img_path='imgs'),
-            ann_file='instances_test.json',
+            ann_file='textdet_test.json',
             pipeline=[dict(type='MockTransform', return_value=1)])
 
         # create dataset_b
@@ -49,12 +50,12 @@ class TestConcatDataset(TestCase):
             data_root=osp.join(
                 osp.dirname(__file__), '../data/det_toy_dataset'),
             data_prefix=dict(img_path='imgs'),
-            ann_file='instances_test.json')
+            ann_file='textdet_test.json')
         self.dataset_b_with_pipeline = dataset(
             data_root=osp.join(
                 osp.dirname(__file__), '../data/det_toy_dataset'),
             data_prefix=dict(img_path='imgs'),
-            ann_file='instances_test.json',
+            ann_file='textdet_test.json',
             pipeline=[dict(type='MockTransform', return_value=2)])
 
     def test_init(self):
@@ -82,7 +83,7 @@ class TestConcatDataset(TestCase):
                 data_root=osp.join(
                     osp.dirname(__file__), '../data/det_toy_dataset'),
                 data_prefix=dict(img_path='imgs'),
-                ann_file='instances_test.json')
+                ann_file='textdet_test.json')
             ConcatDataset(datasets=[dataset_a, dataset_b])
         # test lazy init
         ConcatDataset(

@@ -70,6 +70,8 @@ class KIELocalVisualizer(BaseLocalVisualizer):
             np.ndarray: The image with edge labels drawn.
         """
         pairs = np.where(edge_labels > 0)
+        if torch.is_tensor(pairs):
+            pairs = pairs.cpu()
         key_bboxes = bboxes[pairs[0]]
         value_bboxes = bboxes[pairs[1]]
         x_data = np.stack([(key_bboxes[:, 2] + key_bboxes[:, 0]) / 2,
@@ -90,14 +92,16 @@ class KIELocalVisualizer(BaseLocalVisualizer):
                 colors='k',
                 horizontal_alignments='center',
                 vertical_alignments='center',
-                font_families=self.font_families)
+                font_families=self.font_families,
+                font_properties=self.font_properties)
         if val_texts:
             self.draw_texts(
                 val_texts, (bboxes[val_index, :2] + bboxes[val_index, 2:]) / 2,
                 colors='k',
                 horizontal_alignments='center',
                 vertical_alignments='center',
-                font_families=self.font_families)
+                font_families=self.font_families,
+                font_properties=self.font_properties)
         self.draw_arrows(
             x_data,
             y_data,
@@ -153,7 +157,11 @@ class KIELocalVisualizer(BaseLocalVisualizer):
 
         text_image = np.full(empty_shape, 255, dtype=np.uint8)
         text_image = self.get_labels_image(
-            text_image, texts, bboxes, font_families=self.font_families)
+            text_image,
+            texts,
+            bboxes,
+            font_families=self.font_families,
+            font_properties=self.font_properties)
 
         classes_image = np.full(empty_shape, 255, dtype=np.uint8)
         bbox_classes = [class_names[int(i)]['name'] for i in bbox_labels]
@@ -161,7 +169,8 @@ class KIELocalVisualizer(BaseLocalVisualizer):
             classes_image,
             bbox_classes,
             bboxes,
-            font_families=self.font_families)
+            font_families=self.font_families,
+            font_properties=self.font_properties)
         if polygons:
             polygons = [polygon.reshape(-1, 2) for polygon in polygons]
             image = self.get_polygons_image(

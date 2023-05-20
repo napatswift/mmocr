@@ -20,9 +20,9 @@ Loading
    :template: classtemplate.rst
 
    LoadImageFromFile
-   LoadImageFromLMDB
    LoadOCRAnnotations
    LoadKIEAnnotations
+   InferencerLoader
 
 
 TextDet Transforms
